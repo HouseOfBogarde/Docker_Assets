@@ -1,62 +1,69 @@
----
-version: "2.1"
+
+## https://github.com/jacobalberty/unifi-docker
+
+version: '2.3'
 services:
-  unifi-network-application:
-    image: lscr.io/linuxserver/unifi-network-application:latest
-    container_name: unifi-network-application
+  mongo:
+    image: mongo:3.6
+    container_name: ${COMPOSE_PROJECT_NAME}_mongo
+    networks:
+      - unifi
+    restart: always
+    volumes:
+      - db:/data/db
+      - dbcfg:/data/configdb
+  controller:
+    image: "jacobalberty/unifi:${TAG:-latest}"
+    container_name: ${COMPOSE_PROJECT_NAME}_controller
+    depends_on:
+      - mongo
+    init: true
+    networks:
+      - unifi
+    restart: always
+    volumes:
+      - dir:/unifi
+      - data:/unifi/data
+      - log:/unifi/log
+      - cert:/unifi/cert
+      - init:/unifi/init.d
+      - run:/var/run/unifi
+      # Mount local folder for backups and autobackups
+      - ./backup:/unifi/data/backup
+    user: unifi
+    sysctls:
+      net.ipv4.ip_unprivileged_port_start: 0
     environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Etc/UTC
-      - MONGO_USER=unifi
-      - MONGO_PASS=5nHgg3G0cH9d
-      - MONGO_HOST=unifi-db
-      - MONGO_PORT=27017
-      - MONGO_DBNAME=unifi
-      - MEM_LIMIT=1024 #optional
-      - MEM_STARTUP=1024 #optional
-   #   - MONGO_TLS= #optional
-   #   - MONGO_AUTHSOURCE= #optional
-    volumes:
-      - /home/ubuntu/docker/unifi-controller:/config
+      DB_URI: mongodb://mongo/unifi
+      STATDB_URI: mongodb://mongo/unifi_stat
+      DB_NAME: unifi
     ports:
-      - 8443:8443
-      - 3478:3478/udp
-      - 10001:10001/udp
-      - 8080:8080
-      - 1900:1900/udp #optional
-      - 8843:8843 #optional
-      - 8880:8880 #optional
-      - 6789:6789 #optional
-      - 5514:5514/udp #optional
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.unifi.entrypoints=http"
-      - "traefik.http.routers.unifi.rule=Host(`unifi.jimsgarage.co.uk`)"
-      - "traefik.http.middlewares.unifi-https-redirect.redirectscheme.scheme=https"
-      - "traefik.http.routers.unifi.middlewares=unifi-https-redirect"
-      - "traefik.http.routers.unifi-secure.entrypoints=https"
-      - "traefik.http.routers.unifi-secure.rule=Host(`unifi.jimsgarage.co.uk`)"
-      - "traefik.http.routers.unifi-secure.tls=true"
-      - "traefik.http.routers.unifi-secure.service=unifi"
-      - "traefik.http.services.unifi.loadbalancer.server.port=8443"
-      - "traefik.http.services.unifi.loadbalancer.server.scheme=https"
-      - "traefik.docker.network=proxy"
-    networks:
-      proxy:
-      unifi:
-    restart: unless-stopped
-  unifi-db:
-    image: docker.io/mongo:4.4
-    container_name: unifi-db
+      - "3478:3478/udp" # STUN
+      - "6789:6789/tcp" # Speed test
+      - "8080:8080/tcp" # Device/ controller comm.
+      - "8443:8443/tcp" # Controller GUI/API as seen in a web browser
+      - "8880:8880/tcp" # HTTP portal redirection
+      - "8843:8843/tcp" # HTTPS portal redirection
+      - "10001:10001/udp" # AP discovery
+  logs:
+    image: bash
+    container_name: ${COMPOSE_PROJECT_NAME}_logs
+    depends_on:
+      - controller
+    command: bash -c 'tail -F /unifi/log/*.log'
+    restart: always
     volumes:
-      - /home/ubuntu/docker/unifi-controller-db:/data/db
-      - /home/ubuntu/docker-compose/unifi-controller/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
-    networks:
-      unifi:
-    restart: unless-stopped
+      - log:/unifi/log
+
+volumes:
+  db:
+  dbcfg:
+  data:
+  log:
+  cert:
+  init:
+  dir:
+  run:
 
 networks:
-  proxy:
-    external: true
   unifi:
