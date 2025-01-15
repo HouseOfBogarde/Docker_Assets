@@ -19,6 +19,7 @@ sudo usermod -aG docker $USER
 Needs logout or reboot 
 
 4. Install Portainer, container management GUI
+
 docker pull portainer/portainer-ce:latest
 
 docker images   #should list the image installed above
