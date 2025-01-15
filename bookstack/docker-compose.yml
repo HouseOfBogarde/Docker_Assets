@@ -9,6 +9,7 @@ services:
       - PUID=1000 # User ID for the process
       - PGID=1000 # Group ID for the process
       - APP_URL=http://192.168.1.143:6875 # URL for accessing BookStack
+      - APP_KEY=base64:N3pwOW5wd2piemc0aXZmNGN0MzBvM291cGl3Y2F1MHY=
       - DB_HOST=bookstack_db # Hostname of the database service
       - DB_PORT=3306 # Port for the database service
       - DB_USER=bookstack # Database user
