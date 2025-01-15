@@ -1,5 +1,6 @@
 
 ---
+version: '2'
 services:
   unifi-network-application:
     image: lscr.io/linuxserver/unifi-network-application:latest
